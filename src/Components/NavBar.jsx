@@ -1,96 +1,79 @@
-import { useEffect, useState } from "react";
-import { Container, Nav, Navbar } from "react-bootstrap";
-import logo from "../assets/img/logo.svg";
-import navIcon1 from "../assets/img/nav-icon1.svg";
-import navIcon2 from "../assets/img/nav-icon2.svg";
-import navIcon3 from "../assets/img/nav-icon3.svg";
-import { BrowserRouter as Router } from "react-router-dom";
-import { HashLink } from "react-router-hash-link/dist/react-router-hash-link.cjs.production";
+import { useEffect, useRef, useState } from 'react'
+import { profile } from '../data/Portfolio'
+
+const links = [
+  ['home', 'Home'],
+  ['skills', 'Skills'],
+  ['projects', 'Work'],
+  ['connect', 'Contact'],
+]
 
 export const NavBar = () => {
-  const [activeLink, setActiveLink] = useState("home");
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolled, setScrolled] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState('home')
+  const bar = useRef(null)
 
   useEffect(() => {
+    let raf = 0
     const onScroll = () => {
-      if (window.scrollY > 50) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
-    };
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const max = document.documentElement.scrollHeight - window.innerHeight
+        if (bar.current) bar.current.style.transform = `scaleX(${max > 0 ? window.scrollY / max : 0})`
+        setScrolled(window.scrollY > 8)
+      })
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [])
 
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  const onUpdateActiveLink = (value) => {
-    setActiveLink(value);
-  };
+  useEffect(() => {
+    if (!('IntersectionObserver' in window)) return
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => e.isIntersecting && setActive(e.target.id)),
+      { rootMargin: '-45% 0px -50% 0px' },
+    )
+    links.forEach(([id]) => {
+      const el = document.getElementById(id)
+      if (el) io.observe(el)
+    })
+    return () => io.disconnect()
+  }, [])
 
   return (
-    <Router>
-      <Navbar expand="md" className={scrolled ? "scrolled" : ""}>
-        <Container>
-          <Navbar.Brand href="/">
-            <img src={logo} alt="Logo" />
-          </Navbar.Brand>
-          <Navbar.Toggle aria-controls="basic-navbar-nav">
-            <span className="navbar-toggler-icon"></span>
-          </Navbar.Toggle>
-          <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="ms-auto">
-              <Nav.Link
-                href="#home"
-                className={
-                  activeLink === "home" ? "active navbar-link" : "navbar-link"
-                }
-                onClick={() => onUpdateActiveLink("home")}
-              >
-                Home
-              </Nav.Link>
-              <Nav.Link
-                href="#skills"
-                className={
-                  activeLink === "skills" ? "active navbar-link" : "navbar-link"
-                }
-                onClick={() => onUpdateActiveLink("skills")}
-              >
-                Skills
-              </Nav.Link>
-              <Nav.Link
-                href="#projects"
-                className={
-                  activeLink === "projects"
-                    ? "active navbar-link"
-                    : "navbar-link"
-                }
-                onClick={() => onUpdateActiveLink("projects")}
-              >
-                Projects
-              </Nav.Link>
-            </Nav>
-            <span className="navbar-text">
-              <div className="social-icon">
-                <a href="#">
-                  <img src={navIcon1} alt="" />
-                </a>
-                <a href="#">
-                  <img src={navIcon2} alt="" />
-                </a>
-                <a href="#">
-                  <img src={navIcon3} alt="" />
-                </a>
-              </div>
-              <HashLink to="#connect">
-                <button className="vvd">
-                  <span>Let's Connect</span>
-                </button>
-              </HashLink>
-            </span>
-          </Navbar.Collapse>
-        </Container>
-      </Navbar>
-    </Router>
-  );
-};
+    <header className={`nav${scrolled || open ? ' nav--solid' : ''}`}>
+      <div className="progress" ref={bar} aria-hidden="true" />
+      <div className="nav__bar">
+        <a className="nav__brand" href="#home" onClick={() => setOpen(false)} aria-label={profile.name}>
+          NK
+        </a>
+        <nav className={`nav__links${open ? ' is-open' : ''}`} aria-label="Primary">
+          {links.map(([id, label]) => (
+            <a
+              key={id}
+              href={`#${id}`}
+              className={active === id ? 'is-active' : ''}
+              onClick={() => setOpen(false)}
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+        <button
+          className="nav__toggle"
+          aria-label="Menu"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <span />
+          <span />
+        </button>
+      </div>
+    </header>
+  )
+}
